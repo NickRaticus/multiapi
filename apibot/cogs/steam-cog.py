@@ -6,9 +6,126 @@ import requests
 from discord.ext import commands
 import discord
 import flag
+import steamfront
+client = steamfront.Client()
+auth_token='0e00524d0a0bcd29ac1b49b75e011d21'
 class steam(commands.Cog):
     def __init__(self, client):
           self.client = client 
+    @commands.command()
+    async def usergame(self, ctx, name, *, message: str):
+      x = requests.get(f"http://api.steampowered.com/ISteamUser/ResolveVanityURL/v0001/?key=964A0610CCE27D7155ED1B9E09C32BFE&vanityurl={name}")
+      id  = json.loads(x.text)
+      appid = ""
+      if id["response"]["success"] == 42:
+             embed=discord.Embed(description="Error - User not found", color=0xff0000)
+             await ctx.send(embed=embed)
+      elif id["response"]["success"] == 1:
+             buffer10 = ""
+             stid = id["response"]["steamid"]
+             hed = {'Authorization': 'Bearer ' + auth_token}
+             xx = requests.get(f"https://www.steamgriddb.com/api/v2/search/autocomplete/{message}", headers=hed)
+             games  = json.loads(xx.text)
+             for a in games["data"]:
+              if a["types"] == "steam": 
+                gamename =  a["name"]
+                game = client.getApp(name=gamename)
+                print(game.appid, gamename)
+                appid = game.appid
+              xy = requests.get(f"https://api.steampowered.com/Iplayerservice/Getownedgames/v0001/?key=964A0610CCE27D7155ED1B9E09C32BFE&steamid={stid}")
+              usergames  = json.loads(xy.text)
+
+              for a, p in enumerate(usergames["response"]["games"]):
+                 if p["appid"] == appid:
+                   buffer10 += f"{p['playtime_forever']}"
+                   print(buffer10)
+
+
+    @commands.command()
+    async def stfriends(self, ctx, name):
+      friendpro = ""
+      friendcount = int(0)
+      extrafriend = ""
+      x = requests.get(f"http://api.steampowered.com/ISteamUser/ResolveVanityURL/v0001/?key=964A0610CCE27D7155ED1B9E09C32BFE&vanityurl={name}")
+      id  = json.loads(x.text)
+      if id["response"]["success"] == 42:
+             embed=discord.Embed(description="Error - User not found", color=0xff0000)
+             await ctx.send(embed=embed)
+      elif id["response"]["success"] == 1:
+         stid = id["response"]["steamid"]
+         xy = requests.get(f"http://api.steampowered.com/ISteamUser/GetPlayerSummaries/v1/?key=964A0610CCE27D7155ED1B9E09C32BFE&steamids={stid}")
+         prosum = json.loads(xy.text)
+         friendget = requests.get(f"https://api.steampowered.com/ISteamUser/GetFriendList/v0001/?key=964A0610CCE27D7155ED1B9E09C32BFE&steamid={stid}&relationship=friend")
+         f = json.loads(friendget.text)
+         friend3 = ""
+         friend4 = ""
+         friend5 = ""
+         print(f["friendslist"]["friends"])
+         for info in prosum["response"]["players"]["player"]:
+            nameuser = info["personaname"]
+         for friend, item in enumerate(f["friendslist"]["friends"]):
+          if item["steamid"]:
+            friendcount  = friendcount + 1
+         for friend, item in enumerate(f["friendslist"]["friends"][:50]):
+          if item["steamid"]:
+            xx = requests.get(f"http://api.steampowered.com/ISteamUser/GetPlayerSummaries/v2/?key=964A0610CCE27D7155ED1B9E09C32BFE&steamids={item['steamid']}")
+            sum = json.loads(xx.text)
+            sinceraw = datetime.utcfromtimestamp(int(item["friend_since"]))
+            since = sinceraw.strftime("%Y-%d-%M")
+            
+            for i in (sum["response"]["players"]):
+               embed1=discord.Embed(title=f"{nameuser}'s friends", description=f"`Amount of friends:` {friendcount}")
+          
+            if 0 <= friend <= 10:
+                  friendpro += f'```{i["personaname"]} Since:{since}```'
+            elif 10 <= friend <=20:
+                  extrafriend += f'```{i["personaname"]} Since:{since}```'
+            elif 20 <= friend <= 30:
+                  friend3 += f'```{i["personaname"]} Since:{since}```'
+            elif 30 <= friend <= 40:
+                  friend4 += f'```{i["personaname"]} Since:{since}```'
+            elif 40 <= friend <= 50:
+                friend5 += f'```{i["personaname"]} Since:{since}```'
+                  
+
+
+
+
+      print(friendcount)
+      if 0 <= friendcount <= 10:
+         embed1.add_field(name="Friends:", value=friendpro)
+      if 10 <= friendcount <= 20:
+         embed1.add_field(name="Friends:", value=friendpro)
+         embed1.add_field(name="Friends:", value=extrafriend)
+
+      if 20 <= friendcount <= 30:
+         embed1.add_field(name="Friends:", value=friendpro)
+         embed1.add_field(name="Friends:", value=extrafriend)
+         embed1.add_field(name="Friends:", value=friend3)
+      if 30 <= friendcount <= 40:
+         embed1.add_field(name="Friends:", value=friendpro)
+         embed1.add_field(name="Friends:", value=extrafriend)
+         embed1.add_field(name="Friends:", value=friend3)
+         embed1.add_field(name="Friends:", value=friend4)
+      if 40 <= friendcount <= 50:
+         embed1.add_field(name="Friends:", value=friendpro)
+         embed1.add_field(name="Friends:", value=extrafriend)
+         embed1.add_field(name="Friends:", value=friend3)
+         embed1.add_field(name="Friends:", value=friend4)
+         embed1.add_field(name="Friends:", value=friend5)
+
+      if friendcount > 50:
+         embed1.add_field(name="Friends:", value=friendpro)
+         embed1.add_field(name="Friends:", value=extrafriend)
+         embed1.add_field(name="Friends:", value=friend3)
+         embed1.add_field(name="Friends:", value=friend4)
+         embed1.add_field(name="Friends:", value=friend5)
+         friendlimit = f"User has {friendcount-50} friends which remain to be shown due to limitions."
+         embed1.add_field(name="Notice:", value=f"[{friendlimit}](https://steamcommunity.com/id/{name}/friends/)")
+      await ctx.send(embed=embed1)
+      print(friendpro)
+
+
     @commands.command()
     async def strecent(self, ctx, name):
          buffer3 = ""
