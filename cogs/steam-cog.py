@@ -1,4 +1,3 @@
-from distutils.command.clean import clean
 import json
 from datetime import datetime
 import urllib
@@ -10,6 +9,7 @@ import flag
 import steamfront
 client = steamfront.Client()
 auth_token='0e00524d0a0bcd29ac1b49b75e011d21'
+from bs4 import BeautifulSoup
 class steam(commands.Cog):
     def __init__(self, client):
           self.client = client 
@@ -27,6 +27,7 @@ class steam(commands.Cog):
              hed = {'Authorization': 'Bearer ' + auth_token}
              xx = requests.get(f"https://www.steamgriddb.com/api/v2/search/autocomplete/{message}", headers=hed)
              games  = json.loads(xx.text)
+             print(games)
              numb = int(0)
              for k, a in enumerate(games["data"][:15]):
                if a["name"]:
@@ -45,9 +46,8 @@ class steam(commands.Cog):
                    for t, p in enumerate(usergames["response"]["games"]):
                     if appid:
                       if p["appid"] == appid:
-                       numb = numb+1
-                       buffer10 += f"{p['playtime_forever']//60}{gamename} {p['appid']}\n"
-                       if numb == 1:
+                         numb = numb+1
+                         buffer10 += f"{p['playtime_forever']//60}{gamename} {p['appid']}\n"
                          xz = requests.get(f"https://store.steampowered.com/api/appdetails?appids={appid}&l=English")
                          gameinfo = json.loads(xz.text) 
                          CLEANR = re.compile('<.*?>')
@@ -57,27 +57,63 @@ class steam(commands.Cog):
                          mini = re.sub(CLEANR, '', mini)
                          CLEANR = re.compile('    ')
                          mini = re.sub(CLEANR, '\n', mini)
-                         sep = re.compile('^\s+')
-                         rec = re.sub(CLEANR, '', mini)
+                         CLEANR = re.compile('^\s+')
+                         mini = re.sub(CLEANR, '', mini)
+                         CLEANR = re.compile('Additional Notes:.*$')
+                         mini = re.sub(CLEANR, '', mini)
                          sep = re.compile('<.*?>')
-                         pcreqrec = str(gameinfo[f"{appid}"]["data"]["pc_requirements"]["recommended"])
-                         rec = re.sub(sep, ' ', pcreqrec)
-                         sep = re.compile('Recommended:')
-                         rec = re.sub(sep, '', rec)
-                         sep = re.compile('    ')
-                         rec = re.sub(sep, '\n', rec)
-                         sep = re.compile('^\s+')
-                         rec = re.sub(sep, '', rec)
-                         print(mini)
-                         print(rec)
+                         
+                         try:
+                           pcreqrec = str(gameinfo[f"{appid}"]["data"]["pc_requirements"]["recommended"])
+                           rec = re.sub(sep, ' ', pcreqrec)
+                           sep = re.compile('Recommended:')
+                           rec = re.sub(sep, '', rec)
+                           sep = re.compile('    ')
+                           rec = re.sub(sep, '\n', rec)
+                           sep = re.compile('^\s+')
+                           rec = re.sub(sep, '', rec)
+                           sep = re.compile('Additional Notes:.*$')
+                           rec = re.sub(sep, '', rec)
+                           print(gamename, rec[:100])
+                         except KeyError:
+                           rec = ""
+                           print("rec failed")
+                         dev = re.compile(r"[[''\]]")
+                         devf = re.sub(dev, '', str(gameinfo[f"{appid}"]["data"]["developers"]))
+                         print(devf)
+                         buffer11 = ""
+                         r = requests.get(f'https://store.steampowered.com/app/{appid}')
+                         soup = BeautifulSoup(r.content, 'html.parser')
+                         s = soup.find('div', id= 'developers_list')
+                         lines = s.find_all('a')
+                         for link in lines:
+                          devlink = link.get('href')
+                          devlink = re.sub('\?.*', "", devlink)
+                          print(devlink)
+                         d = requests.get(f'{devlink}')
+                         devhtml = BeautifulSoup(d.content, 'html.parser')
+                         for d in devhtml.select('div.curator_avatar_image'):
+                             for i in d.select('img'):
+                              buffer11 += i['src']
+                              print(i['src'])
+
+
+                         print(gamename, mini[:100])
+
                          embed1=discord.Embed(title=f"{gamename} {p['appid']}", color=0x80ff80)
                          embed1.set_thumbnail(url=f'{gameinfo[f"{appid}"]["data"]["header_image"]}')
+                         embed1.add_field(name="Description:", value=f'```{gameinfo[f"{appid}"]["data"]["short_description"]}```', inline=False)
+                         embed1.add_field(name="Recommended:", value=f'```{rec[:100]}```', inline=False)
+                         embed1.add_field(name="Minimum:", value=f'```{mini[:100]}```', inline=False)
+                         embed1.set_author(name=f"{devf}", url=f"{gameinfo[f'{appid}']['data']['support_info']['url']}", icon_url=f"{buffer11}")
                          embed1.set_footer(text = f'{gameinfo[f"{appid}"]["data"]["developers"]} {gameinfo[f"{appid}"]["data"]["release_date"]["date"]}')
-             await ctx.send(embed=embed1)
+                         await ctx.send(embed=embed1)
+
 
       print(numb)
 
       print(buffer10)
+
 
     @commands.command()
     async def stfriends(self, ctx, name):
@@ -131,35 +167,35 @@ class steam(commands.Cog):
 
       print(friendcount)
       if 0 <= friendcount <= 10:
-         embed1.add_field(name="Friends:", value=friendpro)
+         embed1.add_field(name="Friends:", value=friendpro, inline=False)
       if 10 <= friendcount <= 20:
-         embed1.add_field(name="Friends:", value=friendpro)
-         embed1.add_field(name="Friends:", value=extrafriend)
+         embed1.add_field(name="Friends:", value=friendpro, inline=False)
+         embed1.add_field(name="‎", value=extrafriend, inline=False)
 
       if 20 <= friendcount <= 30:
-         embed1.add_field(name="Friends:", value=friendpro)
-         embed1.add_field(name="Friends:", value=extrafriend)
-         embed1.add_field(name="Friends:", value=friend3)
+         embed1.add_field(name="Friends:", value=friendpro, inline=False)
+         embed1.add_field(name="‎", value=extrafriend, inline=False)
+         embed1.add_field(name="‎", value=friend3, inline=False)
       if 30 <= friendcount <= 40:
-         embed1.add_field(name="Friends:", value=friendpro)
-         embed1.add_field(name="Friends:", value=extrafriend)
-         embed1.add_field(name="Friends:", value=friend3)
-         embed1.add_field(name="Friends:", value=friend4)
+         embed1.add_field(name="Friends:", value=friendpro, inline=False)
+         embed1.add_field(name="‎", value=extrafriend, inline=False)
+         embed1.add_field(name="‎", value=friend3, inline=False)
+         embed1.add_field(name="‎", value=friend4, inline=False)
       if 40 <= friendcount <= 50:
-         embed1.add_field(name="Friends:", value=friendpro)
-         embed1.add_field(name="Friends:", value=extrafriend)
-         embed1.add_field(name="Friends:", value=friend3)
-         embed1.add_field(name="Friends:", value=friend4)
-         embed1.add_field(name="Friends:", value=friend5)
+         embed1.add_field(name="Friends:", value=friendpro, inline=False)
+         embed1.add_field(name="‎", value=extrafriend, inline=False)
+         embed1.add_field(name="‎", value=friend3, inline=False)
+         embed1.add_field(name="‎", value=friend4, inline=False)
+         embed1.add_field(name="‎", value=friend5, inline=False)
 
       if friendcount > 50:
-         embed1.add_field(name="Friends:", value=friendpro)
-         embed1.add_field(name="Friends:", value=extrafriend)
-         embed1.add_field(name="Friends:", value=friend3)
-         embed1.add_field(name="Friends:", value=friend4)
-         embed1.add_field(name="Friends:", value=friend5)
+         embed1.add_field(name="Friends:", value=friendpro, inline=False)
+         embed1.add_field(name="‎", value=extrafriend, inline=False)
+         embed1.add_field(name="‎", value=friend3, inline=False)
+         embed1.add_field(name="‎", value=friend4, inline=False)
+         embed1.add_field(name="‎", value=friend5, inline=False)
          friendlimit = f"User has {friendcount-50} friends which remain to be shown due to limitions."
-         embed1.add_field(name="Notice:", value=f"[{friendlimit}](https://steamcommunity.com/id/{name}/friends/)")
+         embed1.add_field(name="Notice:", value=f"[{friendlimit}](https://steamcommunity.com/id/{name}/friends/)", inline=False)
       await ctx.send(embed=embed1)
       print(friendpro)
 
