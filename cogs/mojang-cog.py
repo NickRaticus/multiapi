@@ -140,5 +140,5 @@ class mc(commands.Cog):
              embed.set_thumbnail(url=f"https://mc-api.net/v3/server/favicon/{address}") 
          await ctx.send(embed=embed)
     
-def setup(client):
-     client.add_cog(mc(client))
+async def setup(client):
+    await client.add_cog(mc(client))
