@@ -1,6 +1,7 @@
 import json
 from datetime import datetime
 from os import devnull
+from unicodedata import name
 import urllib
 import re
 import requests
@@ -14,7 +15,39 @@ auth_token='0e00524d0a0bcd29ac1b49b75e011d21'
 from bs4 import BeautifulSoup
 class steam(commands.Cog):
     def __init__(self, client):
-          self.client = client 
+          self.client = client
+    @commands.command()
+    async def gameinfo(self, ctx, nameorappid):
+         appjson = requests.get(f"https://store.steampowered.com/api/appdetails?appids={nameorappid}&l=english")
+         appinfo = json.loads(appjson.text)
+         print(appinfo)
+         if appinfo != None:
+           print(appinfo[f"{nameorappid}"]["data"])
+           for x in appinfo[f"{nameorappid}"]["data"]:
+            name = x.get("name"[0])
+            print(name)
+         elif appinfo == None:
+             print("name")
+             hed = {'Authorization': 'Bearer ' + auth_token}
+             xx = requests.get(f"https://www.steamgriddb.com/api/v2/search/autocomplete/{nameorappid}", headers=hed)
+             games  = json.loads(xx.text)
+             for k, a in enumerate(games["data"]):
+               if a["name"]:
+                  if 'steam' in a["types"]:
+                   gamename =  a["name"]
+
+                   try:
+                    game = client.getApp(name=gamename)
+                    appid = game.appid
+                    print(gamename, appid)
+                   except steamfront.errors.AppNotFound:
+                     appid = ""
+                     pass
+                   yx = requests.get(f"https://store.steampowered.com/api/appdetails?appids={appid}&l=english", headers=hed)
+                   gamesx  = json.loads(yx.text)
+                   print(gamesx)
+
+
     @commands.command()
     async def usergame(self, ctx, name, *, message: str):
       x = requests.get(f"http://api.steampowered.com/ISteamUser/ResolveVanityURL/v0001/?key=964A0610CCE27D7155ED1B9E09C32BFE&vanityurl={name}")
