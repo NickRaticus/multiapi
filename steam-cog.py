@@ -1,7 +1,6 @@
 import json
 from datetime import datetime
 from os import devnull
-from unicodedata import name
 import urllib
 import re
 import requests
@@ -10,19 +9,25 @@ import discord
 import flag
 import steamfront
 import math
+from discord import app_commands
 client = steamfront.Client()
 auth_token='0e00524d0a0bcd29ac1b49b75e011d21'
 from bs4 import BeautifulSoup
 class steam(commands.Cog):
-    def __init__(self, client):
-          self.client = client
+    def __init__(self, bot: commands.Bot) -> None:
+          self.bot = commands.Bot = bot
+    @app_commands.command(name="command-1")
+    async def my_command(self, interaction: discord.Interaction) -> None:
+     await interaction.response.send_message("Hello from command 1!", ephemeral=True)
+    @commands.hybrid_command(name="test" ,with_app_command=True)
+    async def test(self, interaction: discord.Interaction) -> None:
+      await interaction.send("test!")
     @commands.command()
     async def gameinfo(self, ctx, nameorappid):
+         gamecount = int(0)
          appjson = requests.get(f"https://store.steampowered.com/api/appdetails?appids={nameorappid}&l=english")
          appinfo = json.loads(appjson.text)
-         print(appinfo)
          if appinfo != None:
-           print(appinfo[f"{nameorappid}"]["data"])
            for x in appinfo[f"{nameorappid}"]["data"]:
             name = x.get("name"[0])
             print(name)
@@ -35,18 +40,18 @@ class steam(commands.Cog):
                if a["name"]:
                   if 'steam' in a["types"]:
                    gamename =  a["name"]
-
+                   gamecount = gamecount+1
+                   print(gamecount)
                    try:
                     game = client.getApp(name=gamename)
                     appid = game.appid
-                    print(gamename, appid)
                    except steamfront.errors.AppNotFound:
-                     appid = ""
-                     pass
-                   yx = requests.get(f"https://store.steampowered.com/api/appdetails?appids={appid}&l=english", headers=hed)
+                     print("passed")
+                     next
+                   yx = requests.get(f"https://store.steampowered.com/api/appdetails?appids={appid}&l=english")
                    gamesx  = json.loads(yx.text)
-                   print(gamesx)
-
+                   if appid:
+                    print(gamename, appid, gamesx[f"{appid}"]["data"]["developers"], gamesx[f"{appid}"]["data"]["publishers"])
 
     @commands.command()
     async def usergame(self, ctx, name, *, message: str):
@@ -69,14 +74,10 @@ class steam(commands.Cog):
              stat = int(0)
              ach_ach = ""
              ach_acch = ""
-             ach_not = ""
-             ach_list = ""
              ach_notac = ""
              hgnames = ""
-             achlp_succ = ""
              all_achievements = []
              player_achievements = []
-             lpnames = ""
              for k, a in enumerate(games["data"]):
                if a["name"]:
                   if 'steam' in a["types"]:
@@ -100,7 +101,6 @@ class steam(commands.Cog):
 
                          numb = numb+1
                          devlink = ""
-                         pcrec = ""
                          buffer14 = ""
                          try:
                           p['playtime_2weeks']
@@ -126,7 +126,6 @@ class steam(commands.Cog):
                           for hg in (all_ach["achievementpercentages"]["achievements"]):
                               if hg["name"]:
                                hgnames = f"{hg['name']} {math.trunc(hg['percent'])}%"
-                               procent = "%"
                                all_achievements += [hgnames]                        
                               for lp in (game_progress["playerstats"]["achievements"]):
                                
@@ -135,16 +134,7 @@ class steam(commands.Cog):
                              
                                if lp["name"]:
                                 player_achievements += [ach_ach]                             
-                               #if hg['name']: 
-                                
-                                #ach_list += f"{lp['name']} "
-                                #ach_list = re.sub(" (?=.*\ )", "|", ach_list)
-                                #ach_not = re.sub(ach_list, "", hgnames)
-                                #ach_notac = ach_not
-                                #ach_notac = re.sub('.*\B.\d\B..', '', ach_notac)
-                                #ach_notac = re.sub('^ ', '', ach_notac)
-                                #ach_notac = re.sub('%', '% \n', ach_notac)
-                                #ach_notac = re.sub('\s +', '\n', ach_notac)
+
                                
                              
                             
@@ -158,12 +148,6 @@ class steam(commands.Cog):
                                     ach = ach+1
                          except KeyError:
                             pass
-                         try:
-                           for ko, lo in enumerate(game_progress["playerstats"]["stats"]):
-                             stat = stat+1
-                             print(stat)
-                         except KeyError:
-                           print("stat faild")
                          gameinfo = json.loads(xz.text) 
                          dev = re.compile(r"[[''\]]")
                          devf = re.sub(dev, '', str(gameinfo[f"{appid}"]["data"]["developers"]))
@@ -500,5 +484,5 @@ class steam(commands.Cog):
               embed1.add_field(name="Recently played", value=buffer2, inline=False)
               embed1.add_field(name="playing:", value=f"```fix\n{i['gameextrainfo']}({i['gameid']})```", inline=False)
          await ctx.reply(embed=embed1)
-async def setup(client):
-    await client.add_cog(steam(client))
+async def setup(bot: commands.Bot) -> None:
+    await bot.add_cog(steam(bot), guild = discord.Object(id=966745496959987802))
